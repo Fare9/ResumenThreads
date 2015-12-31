@@ -68,15 +68,20 @@ void *prime_search(void *arg){
         predicado (thread_hold) será rellenado por el capataz.
     */
 
+
     status = pthread_mutex_lock(&cond_mutex); //ponemos candado para establecer valores
     check(status, "Mutex_lock"); //miramos si error
-    pthread_cleanup_push(unlock_cond, NULL); //establecemos metodo para cuando se haga exit, o cancell o pop
-    while (thread_hold) {
-        status = pthread_cond_wait(&cond_var, &cond_mutex);
-        check(status, "Cond_wait");
-    }
-    pthread_cleanup_pop(1);
-
+    /*******************************************/
+    //zona protegida por mutex
+        pthread_cleanup_push(unlock_cond, NULL); //establecemos metodo para cuando se haga exit, o cancell o pop
+        while (thread_hold) {
+            //esperamos mientras el cond_var no cambie de estado
+            status = pthread_cond_wait(&cond_var, &cond_mutex);
+            check(status, "Cond_wait");
+        }
+        pthread_cleanup_pop(1); //al llamar a pop salta la rutina unlock_cond y quita el cond_mutex
+    /*******************************************/
+    
     /*
     Realiza las comprobaciones sobre números cada vez mayores hasta encontrar el
     número deseado de primos.
@@ -84,25 +89,42 @@ void *prime_search(void *arg){
 
     while (not_done) {/* Comprobar petición de cancelación */
 
-        pthread_testcancel();
+        pthread_testcancel(); //comprueba si se ha cancelado el hilo
+
         /* Obtener siguiente número a comprobar */
         status = pthread_mutex_lock(&current_mutex); //cerramos mutex
         check(status, "Mutex_lock"); //miramos si hubo error
         /********************************************/
         //zona protegida por mutex
             current_num = current_num + 2; /* Nos saltamos los pares */
-            numerator = current_num;
+            numerator = current_num; //numerador es el numero que voy a comprobar
         /********************************************/
         status = pthread_mutex_unlock(&current_mutex);
         check(status, "Mutex_unlock");
-        /* Verificamos primalidad hasta número/2 */
-        cut_off = numerator/2 + 1;
-        prime = 1;
-        /* Comprobamos la divisibilidad */
-        for (denominator = 2;((denominator < cut_off) && (prime)); denominator++)
-            prime = numerator % denominator;
 
+        /* Verificamos primalidad hasta número/2 */
+        cut_off = numerator/2 + 1; //cut_off es la mitad del numero + 1
+        prime = 1; //ponemos la variable prime a 1(TRUE)
+        /* Comprobamos la divisibilidad */
+        for (denominator = 2;((denominator < cut_off) && (prime)); denominator++){
+            /*
+                Este bucle va dividiendo el numero con un numero desde 2 hasta su mitad mas 1, probando
+                si el numero es divisible entonces prime es 0 entonces el numero no es primo
+                y sale del bucle
+            */
+            prime = numerator % denominator;
+            /*
+                aqui se podria poner algo del estilo 
+                if (prime == 0) 
+                    break;
+            */
+        }
+        //si el numero no es primo (prime!=0)
         if (prime != 0) {
+            /*
+                Si encontramos un numero primo tenemos que evitar que nos puedan cancelar
+                por tanto ponemos el estado de cancel como DISABLE
+            */
             /* Inhibir posibles cancelaciones */
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
             /*
@@ -114,10 +136,20 @@ void *prime_search(void *arg){
             /********************************************/
             //zona protegida por mutex
                 if (count < request) {
+                    /*
+                    si la cuenta que llevamos de numeros primos 
+                    es menor que el maximo podemos añadirlo y 
+                    aumentamos la cuenta
+                    */
                     primes[count] = numerator;
                     count++;
                 }
                 else if (count == request) {
+                    /*
+                        Si es igual nuestro trabajo esta hecho
+                        sumamos uno a cuenta y cancelamos todos
+                        los demas hilos
+                    */
                     not_done = 0;
                     count++;
                     for (notifiee = 0; notifiee < workers; notifiee++) {
@@ -128,12 +160,15 @@ void *prime_search(void *arg){
                     }
                 }
             /*******************************************************/
-
             status = pthread_mutex_unlock(&prime_list);
             check (status, "Mutex_unlock");
+
+            //una vez acabado el calculo y puesto el numero en la lista, vuelvo
+            //a permitir que me cancelen
             /* Permitir de nuevo cancelaciones */
             pthread_setcancelstate(oldstate, &oldstate);
         }
+        //y miro si hay que cancelarse
         pthread_testcancel();
     }
     return arg;
