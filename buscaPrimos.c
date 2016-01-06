@@ -96,6 +96,7 @@ void *prime_search(void *arg){
         check(status, "Mutex_lock"); //miramos si hubo error
         /********************************************/
         //zona protegida por mutex
+            //current_num es la misma para todos los hilos
             current_num = current_num + 2; /* Nos saltamos los pares */
             numerator = current_num; //numerador es el numero que voy a comprobar
         /********************************************/
@@ -186,7 +187,7 @@ void main()
     int line_idx; /* Alineado de columna en salida */
 
     /*
-        Creación de las hebras trabajadoras.
+        Creación de las hebras trabajadoras.Por parte de hilo principal
     */
 
     for (worker_num = 0; worker_num < workers; worker_num++) {
@@ -200,9 +201,18 @@ void main()
     */
     status = pthread_mutex_lock(&cond_mutex);
     check(status, "Mutex_lock");
-    thread_hold = 0;
-    status = pthread_cond_broadcast(&cond_var);
-    check(status, "Cond_broadcast");
+    /*************************************************/
+    //zona protegida por mutex
+    
+        thread_hold = 0;
+        /*
+            Los threads estan en condicion de wait, hasta que el programa principal
+            llama a pthread_cond_broadcast, realizando un NotifyAll(); como en java.
+        */
+        status = pthread_cond_broadcast(&cond_var);
+        check(status, "Cond_broadcast");
+    
+    /*************************************************/
     status = pthread_mutex_unlock(&cond_mutex);
     check(status, "Mutex_unlock");
 
