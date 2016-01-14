@@ -76,6 +76,12 @@ void *prime_search(void *arg){
         pthread_cleanup_push(unlock_cond, NULL); //establecemos metodo para cuando se haga exit, o cancell o pop
         while (thread_hold) {
             //esperamos mientras el cond_var no cambie de estado
+            //cuando un hilo ejecuta el wait, libera el mutex asi otros 
+            //pueden entrar al wait. Cuando Main cambie el valor de thread_hold
+            //y libere a los hilos  pthread_con_broadcast, todos
+            //los hilos empezaran ejecucion. El primero que salga del 
+            //wait coge el mutex y con pthread_cleanup_pop lo libera 
+            //para que otro pueda salir del wait
             status = pthread_cond_wait(&cond_var, &cond_mutex);
             check(status, "Cond_wait");
         }
@@ -203,7 +209,7 @@ void main()
     check(status, "Mutex_lock");
     /*************************************************/
     //zona protegida por mutex
-    
+        //cambio la variable para que puedan salir del while
         thread_hold = 0;
         /*
             Los threads estan en condicion de wait, hasta que el programa principal
