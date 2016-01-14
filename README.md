@@ -189,59 +189,58 @@ pthread_once_t once_control = PTHREAD_ONCE_INIT;
 int pthread_once(pthread_once_t *once_control,void (*rutina_inicio)(void));
 ```
 rutina_inicio se ejecutará una sola vez da igual hebra, la función comprueba primero once_control.
-
     -Objetos atributo: lista de argumentos que se añade cuando se van a crear ciertos objetos. Se aplican a mutex,variables estado y hebras.
 
 Mutex: 
     Objeto básico: 
-    ```C
+```C
         pthread_mutexattr_t attr;
-    ```
+```
     Creación:
-    ```C
+```C
         int pthread_mutexattr_init(pthread_mutexattr_t *attr);
-    ```
+```
     Destrucción:
-       ```C
+```C
         int pthread_mutexattr_destroy(pthread_mutexattr_t *attr);
-        ```
+```
     Atributo: compartición mutex entre procesos:
-    ```C
+```C
         int pthread_mutexattr_getpshared(pthread_mutexattr_t *attr,int *pshared);
         int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr,int pshared);
-    ```
+```
 Variable de condición:
     Objeto básico:
-    ```C
+```C
         pthread_condattr_t attr;
-    ```
+```
     Creación:
-        ```C
+```C
         int pthread_condattr_init(pthread_condattr_t *attr);
-        ```
+```
     Destrucción:
-    ```C
+```C
         int pthread_condattr_destroy(pthread_condattr_t *attr);
-    ```
+```
     Atributo: compartición variable condición entre procesos:
-    ```C
+```C
         int pthread_condattr_getpshared(pthread_condattr_t *attr,int *pshared);
         int pthread_condattr_setpshared(pthread_condattr_t *attr,int pshared);
-    ```
+```
 
 Hebra:
     Objeto básico:
-    ```C
+```C
         pthread_attr_t attr;
-    ```
+```
     Creación:
-    ```C
+```C
         int pthread_attr_init(pthread_attr_t *attr);
-        ```
+```
     Destrucción:
-        ```C
+```C
         int pthread_attr_init(pthread_attr_t *attr);
-        ```
+```
 #Atributos de hebras
     Detach state:
         ID de hebra puede hacer JOIN: PTHREAD_CREATE_JOINABLE(por defecto)
@@ -285,6 +284,12 @@ int pthread_setcanceltype(int type, int *oldtype);
 type puede ser:
     PTHREAD_CANCEL_DEFERRED
     PTHREAD_CANCEL_ASYNCHRONOUS
+
+Función para comprobar si nos han cancelado, en tal caso finaliza, devolviendo
+el estado: PTHREAD_CANCELED.
+```C
+void pthread_testcancel(void);
+```
 
 Funciones rutina limpieza antes de cancelación:
 ```C
